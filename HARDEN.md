@@ -39,3 +39,7 @@ Saleae Logic Pro 16 on `uo_out` at 125 MS/s: the duty after each of 70,124 conse
 equals the reference decoder's top 5 bits; a code every 32.00 us. The first player restarted one
 DMA channel per block and left a 172 us pause at each block boundary (the PIO waits, nothing is
 lost); two channels chained to each other removed it.
+
+A whole 218 s song (3.4 MB, more than the board's flash holds) was then played through a speaker
+with `host/stream_ua.py`, which sends the file over the board's USB serial port a 16 KiB block at
+a time, as the board asks for them.

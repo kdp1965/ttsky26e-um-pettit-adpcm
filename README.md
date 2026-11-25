@@ -10,6 +10,7 @@ flip-flops in the experimental sky130 **micro tile** (70.38 x 51.68 um; `tiles: 
 - [src/tt_um_pettit_micro3.v](src/tt_um_pettit_micro3.v): the design, one file
 - [tools/uadpcm.py](tools/uadpcm.py): encoder, reference decoder, converters (no dependencies)
 - [host/play_ua.py](host/play_ua.py): MicroPython PIO + DMA player for the demo board's RP2
+- [host/stream_ua.py](host/stream_ua.py): plays a file of any length by streaming it from a computer over the board's USB port
 - [fpga/](fpga/): the design on the Tiny Tapeout FPGA breakout (iCE40UP5K), where it has been run
 - [HARDEN.md](HARDEN.md): the local LibreLane runs
 
@@ -38,7 +39,8 @@ cd fpga && make && make upload PORT=/dev/cu.usbmodemXXXX     # OSS CAD Suite and
 mpremote cp host/play_ua.py :/play_ua.py + cp clip.ua :/clip.ua
 ```
 
-then, on the board, the six lines at the top of `host/play_ua.py`. Checked on 2026-11-25 with a
+then, on the board, the six lines at the top of `host/play_ua.py`; or, for a song that does not
+fit the board's flash, `python3 host/stream_ua.py song.ua /dev/cu.usbmodemXXXX` on the computer. Checked on 2026-11-25 with a
 logic analyser on `uo_out`: 70,124 consecutive samples of a song, the duty after every code equal
 to the reference decoder's, a code every 32.00 us with no gap between DMA blocks.
 
