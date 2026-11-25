@@ -28,3 +28,14 @@ uncertainty. Gate-level simulation of rc1's netlist: 3000 samples, 388,096 clock
 mismatches. tt-support-tools precheck (main, micro rules): pass.
 
 Not promoted: `gds/` is not in the repository; the GitHub gds action builds its own.
+
+## On the FPGA (2026-11-25)
+
+`fpga/` builds the design for the Tiny Tapeout FPGA breakout (iCE40UP5K, FabricFox pinout) with
+its own 4-port top: tt-support-tools' `tt_fpga.py` instantiates `uio_*` and `ena`, which a micro
+tile project does not have, so the repository's fpga workflow cannot build it. 123 logic cells,
+48 MHz. Run at 32 MHz with `host/play_ua.py` streaming 10 s of a song from the RP2350B and a
+Saleae Logic Pro 16 on `uo_out` at 125 MS/s: the duty after each of 70,124 consecutive codes
+equals the reference decoder's top 5 bits; a code every 32.00 us. The first player restarted one
+DMA channel per block and left a 172 us pause at each block boundary (the PIO waits, nothing is
+lost); two channels chained to each other removed it.

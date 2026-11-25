@@ -9,7 +9,8 @@ flip-flops in the experimental sky130 **micro tile** (70.38 x 51.68 um; `tiles: 
 - [The datasheet](docs/info.md): the codec, the datapath, the host's protocol
 - [src/tt_um_pettit_micro3.v](src/tt_um_pettit_micro3.v): the design, one file
 - [tools/uadpcm.py](tools/uadpcm.py): encoder, reference decoder, converters (no dependencies)
-- [host/play_ua.py](host/play_ua.py): MicroPython PIO + DMA player for the demo board (not yet run on hardware)
+- [host/play_ua.py](host/play_ua.py): MicroPython PIO + DMA player for the demo board's RP2
+- [fpga/](fpga/): the design on the Tiny Tapeout FPGA breakout (iCE40UP5K), where it has been run
 - [HARDEN.md](HARDEN.md): the local LibreLane runs
 
 ## Make and hear a stream
@@ -29,6 +30,17 @@ make                              # RTL: 3000 samples streamed in, every clock a
 make GATES=yes                    # the same on gate_level_netlist.v (needs PDK_ROOT)
 PERIOD=1024 SAMPLES=400 make      # at the real 31250 Hz strobe rate
 ```
+
+## On the FPGA breakout
+
+```sh
+cd fpga && make && make upload PORT=/dev/cu.usbmodemXXXX     # OSS CAD Suite and mpremote on the PATH
+mpremote cp host/play_ua.py :/play_ua.py + cp clip.ua :/clip.ua
+```
+
+then, on the board, the six lines at the top of `host/play_ua.py`. Checked on 2026-11-25 with a
+logic analyser on `uo_out`: 70,124 consecutive samples of a song, the duty after every code equal
+to the reference decoder's, a code every 32.00 us with no gap between DMA blocks.
 
 ## Hardening locally
 

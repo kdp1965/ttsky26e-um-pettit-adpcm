@@ -58,7 +58,8 @@ To make a stream: `python3 tools/uadpcm.py encode song.wav song.ua` (a 16-bit WA
 it should play at; `afconvert -f WAVE -d LEI16@31250 -c 1 song.m4a song.wav` makes one on
 macOS), and `python3 tools/uadpcm.py decode song.ua check.wav` writes exactly what the chip will
 play. `host/play_ua.py` is a MicroPython player for the demo board's RP2: a two-instruction PIO
-program fed by DMA.
+program fed by two chained DMA channels. The design and the player have been run on the Tiny
+Tapeout FPGA breakout (`fpga/`), where 70,124 consecutive samples matched the reference decoder.
 
 There is no resynchronisation in the stream: a lost or repeated code shifts everything after
 it, until the next reset. A code of 0 sent many times lets the step fall back to its minimum.
