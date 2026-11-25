@@ -1,0 +1,30 @@
+# Harden log
+
+Local LibreLane 3.0.2 runs (`harden/`, sky130A open_pdks 8afc834) of tt_um_pettit_micro3 on the
+micro tile. The recipe is `src/config.json`, the same as ttsky26e-um-pettit-micro's (drive
+strength 1 cells allowed in synthesis, hold margins 0.04 / 0.03, a one-cluster clock tree) with
+the clock period at 31 ns.
+
+## Why bit-serial (2026-11-25)
+
+A parallel IMA decoder was estimated at well over the tile: the 89 x 15-bit step table alone
+is some 800 um2 of logic, the 16-bit add with clamps 350, the delta's three adders 600. Two
+16-bit shift registers that rotate continuously cost 640 um2 of flops and no logic at all (no
+enables, no muxes: D is the neighbour's Q), and one full adder does every operation. 16-bit
+registers rather than 12 because 2 x 16 clocks is one 32-clock PWM period: the registers are
+back in place exactly when the PWM takes its duty, so nothing needs a shift enable.
+
+## Runs
+
+| run | synth um2 | result |
+|-----|-----------|--------|
+| rc1 | 1994 | clean, 88.1% utilization, router 4 iterations |
+
+rc1: standard cells 2641 um2, of which timing repair buffers 480 (hold buffers: a shift register
+is 32 flop-to-flop paths with nothing between) and clock buffers 113; wire 5491 um; route DRC,
+Magic DRC, LVS and antenna 0; 3 max-slew warnings; setup +19.8 ns at max_ss against the 31 ns
+period; hold +0.064 ns at min_ff (+0.235 at tt), on top of LibreLane's 0.25 ns clock
+uncertainty. Gate-level simulation of rc1's netlist: 3000 samples, 388,096 clocks, 0
+mismatches. tt-support-tools precheck (main, micro rules): pass.
+
+Not promoted: `gds/` is not in the repository; the GitHub gds action builds its own.
