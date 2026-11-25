@@ -1,9 +1,15 @@
 name: fpga
 
+# The bitstream for the Tiny Tapeout FPGA breakout (iCE40UP5K), built from
+# fpga/: a micro tile project has no uio_* and no ena, which the top of
+# TinyTapeout/tt-gds-action/fpga/ice40up5k (tt-support-tools' tt_fpga.py)
+# instantiates.
 on:
   push:
-    # Comment out (or remove) the following line to run the FPGA workflow on every push:
-    branches: none
+    paths:
+      - 'src/**.v'
+      - 'fpga/**'
+      - '.github/workflows/fpga.yaml'
   workflow_dispatch:
 
 jobs:
@@ -12,8 +18,20 @@ jobs:
     steps:
       - name: checkout repo
         uses: actions/checkout@v6
-        with:
-          submodules: recursive
 
-      - name: FPGA bitstream for TT ASIC Sim (ICE40UP5K)
-        uses: TinyTapeout/tt-gds-action/fpga/ice40up5k@ttsky26e
+      - name: install oss-cad-suite
+        uses: YosysHQ/setup-oss-cad-suite@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create the bitstream
+        run: |
+          make -C fpga
+          grep -E "ICESTORM_LC:|Max frequency" fpga/build/02-nextpnr.log | tee -a $GITHUB_STEP_SUMMARY
+
+      - name: Upload the bitstream
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fpga_bitstream
+          path: fpga/build/*
