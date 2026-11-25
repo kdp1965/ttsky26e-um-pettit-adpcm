@@ -11,13 +11,13 @@ project:
   tiles: "micro"          # micro: a quarter-size experimental tile (clk, rst_n, ui_in, uo_out only)
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
-  top_module:  "tt_um_pettit_micro3"
+  top_module:  "tt_um_pettit_adpcm"
 
   # List your project's source files here.
   # Source files must be in ./src and you must list each source file separately, one per line.
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
-    - "tt_um_pettit_micro3.v"
+    - "tt_um_pettit_adpcm.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).

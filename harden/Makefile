@@ -1,4 +1,4 @@
-# Harden tt_um_pettit_micro3 on this machine with LibreLane.
+# Harden tt_um_pettit_adpcm on this machine with LibreLane.
 #
 #   make harden TAG=t1 [OVERLAY=trial.json] [TO=OpenROAD.GlobalRouting]
 #   make synth  TAG=s1          synthesis only: runs/s1/*-yosys-synthesis/reports/stat.rpt

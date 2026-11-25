@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Ken Pettit
  * SPDX-License-Identifier: Apache-2.0
  *
- * tt_um_pettit_micro3 - a streaming ADPCM decoder with a 1 MHz PWM output,
+ * tt_um_pettit_adpcm - a streaming ADPCM decoder with a 1 MHz PWM output,
  * for the Tiny Tapeout micro tile (70.38 x 51.68 um of sky130; clk, rst_n,
  * ui_in and uo_out only).
  *
@@ -28,7 +28,7 @@
 
 `default_nettype none
 
-module tt_um_pettit_micro3 #(
+module tt_um_pettit_adpcm #(
     parameter SD = 5            // sigma-delta bits below the 5 PWM bits
 ) (
     input  wire [7:0] ui_in,    // Dedicated inputs

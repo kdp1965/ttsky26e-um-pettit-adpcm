@@ -1,6 +1,6 @@
 # Harden log
 
-Local LibreLane 3.0.2 runs (`harden/`, sky130A open_pdks 8afc834) of tt_um_pettit_micro3 on the
+Local LibreLane 3.0.2 runs (`harden/`, sky130A open_pdks 8afc834) of tt_um_pettit_adpcm on the
 micro tile. The recipe is `src/config.json`, the same as ttsky26e-um-pettit-micro's (drive
 strength 1 cells allowed in synthesis, hold margins 0.04 / 0.03, a one-cluster clock tree) with
 the clock period at 31 ns.
@@ -19,6 +19,7 @@ back in place exactly when the PWM takes its duty, so nothing needs a shift enab
 | run | synth um2 | result |
 |-----|-----------|--------|
 | rc1 | 1994 | clean, 88.1% utilization, router 4 iterations |
+| rc2 | 1994 | the top renamed tt_um_pettit_adpcm (was tt_um_pettit_micro3): the same numbers; gate-level test and precheck pass |
 
 rc1: standard cells 2641 um2, of which timing repair buffers 480 (hold buffers: a shift register
 is 32 flop-to-flop paths with nothing between) and clock buffers 113; wire 5491 um; route DRC,

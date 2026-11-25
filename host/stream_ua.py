@@ -8,7 +8,7 @@ a gap.  For files that do not fit the board's flash (a 3.6 minute song at
 31250 Hz is 3.4 MB).
 
 Needs mpremote (pip install mpremote).  The board must hold the bitstream
-(/bitstreams/tt_um_pettit_micro3.bin, fpga/ `make upload`).
+(/bitstreams/tt_um_pettit_adpcm.bin, fpga/ `make upload`).
 """
 import struct
 import sys
@@ -23,7 +23,7 @@ from ttboard.boot.demoboard_detect import DemoboardDetect
 from ttboard.demoboard import DemoBoard
 DemoboardDetect.probe()
 tt = DemoBoard()
-tt.shuttle.tt_um_pettit_micro3.enable()
+tt.shuttle.tt_um_pettit_adpcm.enable()
 tt.ui_in.value = 0
 tt.clock_project_PWM(32000000)
 tt.reset_project(True); time.sleep_ms(5); tt.reset_project(False)

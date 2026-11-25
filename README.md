@@ -7,7 +7,7 @@ bit-serial datapath (one full adder) and plays them as 1 MHz sigma-delta dithere
 flip-flops in the experimental sky130 **micro tile** (70.38 x 51.68 um; `tiles: "micro"`).
 
 - [The datasheet](docs/info.md): the codec, the datapath, the host's protocol
-- [src/tt_um_pettit_micro3.v](src/tt_um_pettit_micro3.v): the design, one file
+- [src/tt_um_pettit_adpcm.v](src/tt_um_pettit_adpcm.v): the design, one file
 - [tools/uadpcm.py](tools/uadpcm.py): encoder, reference decoder, converters (no dependencies)
 - [host/play_ua.py](host/play_ua.py): MicroPython PIO + DMA player for the demo board's RP2
 - [host/stream_ua.py](host/stream_ua.py): plays a file of any length by streaming it from a computer over the board's USB port

@@ -1,9 +1,9 @@
 # The design on the Tiny Tapeout FPGA breakout (iCE40UP5K, FabricFox pinout):
-#   make                 build/tt_um_pettit_micro3.bin   (yosys, nextpnr-ice40, icepack: OSS CAD Suite on the PATH)
+#   make                 build/tt_um_pettit_adpcm.bin   (yosys, nextpnr-ice40, icepack: OSS CAD Suite on the PATH)
 #   make upload          copy it to the board's /bitstreams (mpremote, PORT=/dev/cu.usbmodem...)
 # tt-support-tools' tt_fpga.py does the same for full-size projects; its top
 # has the uio and ena ports that a micro tile project does not.
-NAME = tt_um_pettit_micro3
+NAME = tt_um_pettit_adpcm
 FREQ ?= 32
 PORT ?= auto
 B = build

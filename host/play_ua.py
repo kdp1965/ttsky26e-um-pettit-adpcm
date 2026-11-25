@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """play_ua.py - stream a uADPCM file (tools/uadpcm.py encode) into
-tt_um_pettit_micro3 from the demo board's RP2 in MicroPython: a PIO state
+tt_um_pettit_adpcm from the demo board's RP2 in MicroPython: a PIO state
 machine puts one 4-bit code on ui[3:0] and pulses the strobe ui[4] per
 sample, and two DMA channels that chain to each other feed it from two RAM
 buffers, so the stream has no gap while the next block is read from flash.
@@ -12,7 +12,7 @@ demo boards have ui_in[0..3] on GPIO 9..12 and ui_in[4] on GPIO 17.
     from ttboard.boot.demoboard_detect import DemoboardDetect
     from ttboard.demoboard import DemoBoard
     DemoboardDetect.probe(); tt = DemoBoard()
-    tt.shuttle.tt_um_pettit_micro3.enable()
+    tt.shuttle.tt_um_pettit_adpcm.enable()
     tt.clock_project_PWM(32_000_000)      # the PWM is clock / 32: 1 MHz
     tt.reset_project(True); tt.reset_project(False)
     import play_ua

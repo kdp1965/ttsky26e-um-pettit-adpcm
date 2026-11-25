@@ -24,7 +24,7 @@ module tb ();
 `endif
 
   // A micro tile has only clk, rst_n, ui_in and uo_out
-  tt_um_pettit_micro3 user_project (
+  tt_um_pettit_adpcm user_project (
 
       // Include power ports for the Gate Level test:
 `ifdef GL_TEST

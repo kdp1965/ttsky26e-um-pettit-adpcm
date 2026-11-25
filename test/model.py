@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Cycle-exact model of tt_um_pettit_micro3: step(ui) is one rising clock
+"""Cycle-exact model of tt_um_pettit_adpcm: step(ui) is one rising clock
 edge with rst_n high (after a reset of 16 clocks or more) and returns the
 uo_out the chip shows after it.  value() is the predictor as a number, valid
 whenever the bit counter is 0."""

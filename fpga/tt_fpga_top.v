@@ -9,7 +9,7 @@ module tt_fpga_top (
     input  wire       clk,
     input  wire       rst_n
 );
-  tt_um_pettit_micro3 user_project (
+  tt_um_pettit_adpcm user_project (
       .ui_in (ui_in),
       .uo_out(uo_out),
       .clk   (clk),
