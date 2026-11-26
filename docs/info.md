@@ -119,12 +119,12 @@ The bitstream is also built by this repository's `fpga` GitHub action (the `fpga
 artifact) and by `make` in `fpga/`, with the OSS CAD Suite; `make upload` copies it to the
 board's `/bitstreams` folder with mpremote.
 
-### On the real TTSKY26A Chip / Demo board
+### On the real ttsky26e Chip / Demo board
 
 The goal is for this same web app to detect and work with the actual micro tile.  However 
 until the tapeout has occurred, the project and sub-tile ID are unknown (assuming this
 design is selected for inclusion).  Once real hardware is back, the app will need an update
-to detect the ttsky26a board, choose the proper design and micro tile, configure the clock,
+to detect the ttsky26e board, choose the proper design and micro tile, configure the clock,
 etc.
 
 ### Pins
