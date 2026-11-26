@@ -28,7 +28,9 @@ or open `web/index.html` directly. Web Serial needs Chrome or Edge on a computer
 3. **Play on chip** streams it. Click the waveform to choose where to start; *Stop* fades out.
 4. **Save to board** writes the stream to the Pmod's flash or to one of its PSRAMs, verified
    block by block. The songs listed under *Songs on the board* are then played by the board on
-   its own, read from the Pmod, with the page only showing progress.
+   its own, read from the Pmod, with the page only showing progress and a *Stop*. A song can be
+   renamed or deleted, on the flash as well: only the 4 KiB directory is rewritten.
+5. **Disconnect** (or closing the page) while something is playing stops it first.
 
 ## Files
 

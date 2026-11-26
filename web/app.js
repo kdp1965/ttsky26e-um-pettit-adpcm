@@ -17,6 +17,8 @@
     board: null, port: null, reader: null, writer: null, stores: [],
     busy: "",            // "", "convert", "stream", "stored", "save", "connect"
     stream: null, preview: null, gen: 0,
+    job: null,           // the promise of the play in progress
+    nowPlaying: null,    // the library entry the board is playing
   };
 
   function log(msg) {
@@ -36,7 +38,7 @@
     $("save").disabled = !(on && S.song && idle);
     $("saveui").classList.toggle("hidden", !(on && S.stores.length));
     $("library").classList.toggle("hidden", !(on && S.stores.length));
-    for (const b of document.querySelectorAll("#stores button")) b.disabled = !idle;
+    for (const b of document.querySelectorAll("#stores button")) b.disabled = !idle && !b.dataset.stop;
   }
   function setBusy(b) { S.busy = b; refresh(); }
   function progress(v) {
@@ -243,6 +245,11 @@
 
   // ------------------------------------------------------------- the board
   async function disconnect(quiet) {
+    // stop what is playing and let the board finish, so that it is left silent and at its prompt
+    if (S.board && S.job && (S.busy === "stream" || S.busy === "stored")) {
+      stop();
+      await Promise.race([S.job.catch(() => {}), sleep(4000)]);
+    }
     const { reader, writer, port } = S;
     S.board = null; S.port = S.reader = S.writer = null; S.stores = [];
     try { if (reader) await reader.cancel(); } catch (e) { /* gone */ }
@@ -250,7 +257,9 @@
     try { if (port) await port.close(); } catch (e) { /* gone */ }
     $("status").textContent = "Not connected";
     S.busy = "";
+    S.nowPlaying = null; S.job = null;
     progress(null);
+    libProgress(null);
     refresh();
     if (!quiet) log("Disconnected");
   }
@@ -298,8 +307,8 @@
       for (const s of S.stores) sel.add(new Option(s.label, s.i));
       const ram = S.stores.find((s) => !s.flash);
       if (ram) sel.value = ram.i;
-      setBusy("");
       await loadLibrary();
+      setBusy("");
     } catch (e) {
       fail(e);
       await disconnect(true);
@@ -344,11 +353,14 @@
           const c2 = tr.insertCell(); c2.className = "num"; c2.textContent = e.rate + " Hz";
           const c3 = tr.insertCell(); c3.className = "num"; c3.textContent = fmtB(e.bytes);
           const c4 = tr.insertCell(); c4.className = "num";
-          const bp = document.createElement("button"); bp.className = "small"; bp.textContent = "Play";
-          bp.onclick = () => playStored(s, e);
+          const bp = document.createElement("button"); bp.className = "small";
+          if (S.nowPlaying === e) { bp.textContent = "Stop"; bp.dataset.stop = "1"; bp.classList.add("primary"); bp.onclick = stop; }
+          else { bp.textContent = "Play"; bp.onclick = () => { S.job = playStored(s, e); }; }
+          const br = document.createElement("button"); br.className = "small"; br.textContent = "Rename"; br.style.marginLeft = "6px";
+          br.onclick = () => renameEntry(s, k);
           const bd = document.createElement("button"); bd.className = "small"; bd.textContent = "Delete"; bd.style.marginLeft = "6px";
           bd.onclick = () => removeEntry(s, k);
-          c4.append(bp, bd);
+          c4.append(bp, br, bd);
         });
         div.appendChild(t);
       }
@@ -399,18 +411,31 @@
     if (S.board) setBusy("");
   }
 
+  function libProgress(e, bytes) {
+    const now = $("libnow");
+    now.classList.toggle("hidden", !e);
+    if (!e) return;
+    $("libprog").value = bytes / e.bytes;
+    $("libtext").textContent = e.name + "  " + fmtT(bytes * 2 / e.rate) + " / " + fmtT(e.samples / e.rate);
+  }
+
   async function playStored(store, e) {
     if (!S.board || S.busy) return;
     stopPreview();
+    S.nowPlaying = e;
     setBusy("stored");
-    progress(0);
+    renderLibrary();
+    libProgress(e, 0);
     log("Board plays " + e.name + " from " + store.label);
     try {
-      const r = await S.board.playStored(store.i, e.offset, e.bytes, e.rate, (p) => progress(p / e.bytes));
+      // the board reports what it has read, which is two blocks ahead of what is heard
+      const r = await S.board.playStored(store.i, e.offset, e.bytes, e.rate,
+                                         (p) => libProgress(e, Math.max(0, p - 2 * UABoard.BLOCK)));
       log(r.stopped ? "Stopped" : "Finished");
     } catch (err) { fail(err); }
-    progress(null);
-    if (S.board) setBusy("");
+    S.nowPlaying = null;
+    libProgress(null);
+    if (S.board) { setBusy(""); renderLibrary(); }
   }
 
   async function writeDir(store) {
@@ -456,6 +481,25 @@
     if (S.board) setBusy("");
   }
 
+  async function renameEntry(store, k) {
+    if (!S.board || S.busy) return;
+    const e = store.entries[k];
+    let name = window.prompt("New name for " + e.name + " (" + store.label + ")", e.name);
+    if (name === null) return;
+    name = name.trim();
+    while (new TextEncoder().encode(name).length > 23) name = name.slice(0, -1);
+    if (!name || name === e.name) return;
+    setBusy("save");
+    const old = e.name;
+    try {
+      e.name = name;
+      await writeDir(store);          // only the 4 KiB directory is rewritten
+      log("Renamed " + old + " to " + name);
+    } catch (err) { e.name = old; fail(err); }
+    renderLibrary();
+    if (S.board) setBusy("");
+  }
+
   function stop() {
     if (S.busy === "stream" && S.stream) S.stream.stop = true;
     else if (S.busy === "stored" && S.board) S.board.stop();
@@ -463,7 +507,16 @@
 
   // ----------------------------------------------------------------- wiring
   $("connect").addEventListener("click", () => connect().catch(fail));
-  $("play").addEventListener("click", () => playOnChip().catch(fail));
+  $("play").addEventListener("click", () => { S.job = playOnChip().catch(fail); });
+  $("libstop").addEventListener("click", stop);
+  // the page is going away: a last word to the board, without waiting for it
+  window.addEventListener("pagehide", () => {
+    if (!S.writer) return;
+    try {
+      if (S.busy === "stored") S.writer.write(new Uint8Array([3]));          // Ctrl-C
+      else if (S.busy === "stream") S.writer.write(new Uint8Array(2));       // "the end" for its next request
+    } catch (e) { /* too late */ }
+  });
   $("stop").addEventListener("click", stop);
   $("save").addEventListener("click", () => saveSong().catch(fail));
   const drop = $("drop");
