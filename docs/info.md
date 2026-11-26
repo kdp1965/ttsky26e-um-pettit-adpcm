@@ -20,11 +20,11 @@ arithmetic, so the two stay together with nothing but the codes passing between 
 
 A code is 4 bits, `{sign, m2, m1, m0}`. Each one does two things:
 
-    delta = step/8 + (m2 ? step : 0) + (m1 ? step/2 : 0) + (m0 ? step/4 : 0)
+    delta = step/8 + (m2?step:0) + (m1?step/2:0) + (m0?step/4:0)
     pred  = sign ? pred - delta : pred + delta
 
-    step  = m2 ? step + (step >> (3 - {m1,m0}))    times 1.125, 1.25, 1.5 or 2
-               : step - step/16                    times 0.94; stops at 15 by itself
+    step  = m2 ? step + (step >> (3 - {m1,m0}))  x 1.125,1.25,1.5 or 2
+               : step - step/16                  x 0.94
 
 The magnitude `m` moves the predictor by (2m + 1)/8 of a step, so the eight magnitudes cover
 1/8 to 15/8 of a step. Magnitudes 0 to 3 mean the step was large enough and let it decay;
