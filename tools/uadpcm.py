@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-"""uadpcm.py - the micro tile's ADPCM ("uADPCM"): encoder, reference decoder,
-and converters.  No dependencies.
+"""uadpcm.py - the uADPCM codec of tt_um_pettit_adpcm: encoder, reference
+decoder and the .ua stream file.  No dependencies.  (audio2ua.py is the
+front end that takes mp3 / m4a / wma / MIDI and prepares the audio; this
+file is the codec itself.)
 
-The codec is IMA ADPCM with the step table replaced by arithmetic that a
-bit-serial datapath does with one full adder.  16-bit unsigned predictor
-(reset 0x8000), 16-bit step (reset 16), 4-bit code {sign, m[2:0]}:
+uADPCM is a 4-bit adaptive differential PCM: every code moves a 16-bit
+predictor by a multiple of a step size, and the step size follows the codes,
+growing after large ones and shrinking after small ones.  Both updates are
+shifts and adds of the step, so a bit-serial datapath does them with one
+full adder.  16-bit unsigned predictor (reset 0x8000), 16-bit step (reset
+16), code {sign, m[2:0]}:
 
     pred -/+= step>>3 + (m2 ? step : 0) + (m1 ? step>>1 : 0) + (m0 ? step>>2 : 0)
     step  = m2 ? step + (step >> (3 - m[1:0]))       x 1.125, 1.25, 1.5, 2
@@ -14,12 +19,13 @@ bit-serial datapath does with one full adder.  16-bit unsigned predictor
 The decoder has no clamps: the ENCODER never emits a code that would take
 the predictor outside 0..65535 or the step past 65535.
 
-    uadpcm.py encode IN OUT.ua [--seconds S] [--start S] [--gain G]
-        IN: a .wav (16-bit PCM, first channel) or a prism-tui IMA ADPCM .bin
-        OUT.ua: header 'uADP', u32 samples, u32 rate, then two codes a byte,
-                low nibble first
-    uadpcm.py decode IN.ua OUT.wav          what the chip will play
-    uadpcm.py snr IN [--seconds S]          SNR of uADPCM and of IMA on IN
+    uadpcm.py encode IN.wav OUT.ua [--seconds S] [--start S] [--gain G]
+        IN.wav: 16-bit PCM, first channel, at the rate it is to play at
+        OUT.ua: 'uADP', u32 samples, u32 rate (little-endian), then two
+                codes a byte, low nibble first
+    uadpcm.py decode IN.ua OUT.wav          exactly what the chip will play
+    uadpcm.py snr IN.wav [--seconds S]      SNR of uADPCM, and of standard
+                                            IMA ADPCM for comparison
 """
 import struct
 import sys
@@ -73,34 +79,13 @@ def encode(samples, pred=PRED0, step=STEP0):
     return codes
 
 
-# ------------------------------------------------------------- file formats
+# ------------------------------------------- IMA ADPCM, for the comparison
 _IMA_STEP = [7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97,
              107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449, 494, 544, 598, 658, 724,
              796, 876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066, 2272, 2499, 2749, 3024, 3327, 3660, 4026,
              4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899, 15289, 16818, 18500,
              20350, 22385, 24623, 27086, 29794, 32767]
 _IMA_INDEX = [-1, -1, -1, -1, 2, 4, 6, 8]
-
-
-def read_prism_bin(blob, start=0, count=None):
-    """A prism-tui IMA ADPCM blob (u32 samples, rate, block; blocks of i16
-    predictor, u8 index, u8 0, nibbles) to (rate, signed 16-bit samples)."""
-    total, rate, bs = struct.unpack_from("<III", blob, 0)
-    end = total if count is None else min(total, start + count)
-    out = []
-    blk = 4 + bs // 2
-    for b0 in range(start // bs * bs, end, bs):
-        o = 12 + (b0 // bs) * blk
-        pred, idx = struct.unpack_from("<hB", blob, o)
-        for i in range(min(bs, total - b0)):
-            nib = (blob[o + 4 + (i >> 1)] >> (4 * (i & 1))) & 0xF
-            st = _IMA_STEP[idx]
-            pred += -delta_of(st, nib & 7) if nib & 8 else delta_of(st, nib & 7)
-            pred = max(-32768, min(32767, pred))
-            idx = max(0, min(88, idx + _IMA_INDEX[nib & 7]))
-            if start <= b0 + i < end:
-                out.append(pred)
-    return rate, out
 
 
 def ima_roundtrip(samples):
@@ -127,20 +112,17 @@ def ima_roundtrip(samples):
 
 
 def read_audio(path, start_s=0.0, seconds=None):
-    """(rate, signed 16-bit samples) from a .wav or a prism-tui .bin."""
-    blob = open(path, "rb").read()
-    if blob[:4] == b"RIFF":
-        with wave.open(path, "rb") as w:
-            assert w.getsampwidth() == 2, "16-bit PCM WAV only"
-            rate, ch = w.getframerate(), w.getnchannels()
-            w.setpos(int(start_s * rate))
-            n = w.getnframes() - int(start_s * rate) if seconds is None else int(seconds * rate)
-            raw = w.readframes(n)
-        return rate, [v[0] for v in struct.iter_unpack("<" + "h" * ch, raw)]
-    rate = struct.unpack_from("<I", blob, 4)[0]
-    return read_prism_bin(blob, int(start_s * rate), None if seconds is None else int(seconds * rate))
+    """(rate, signed 16-bit samples) from a 16-bit PCM .wav, first channel."""
+    with wave.open(path, "rb") as w:
+        assert w.getsampwidth() == 2, "16-bit PCM WAV only"
+        rate, ch = w.getframerate(), w.getnchannels()
+        w.setpos(int(start_s * rate))
+        n = w.getnframes() - int(start_s * rate) if seconds is None else int(seconds * rate)
+        raw = w.readframes(n)
+    return rate, [v[0] for v in struct.iter_unpack("<" + "h" * ch, raw)]
 
 
+# ------------------------------------------------------------- file formats
 def write_ua(path, codes, rate):
     if len(codes) & 1:
         codes = codes + [0]

@@ -1,13 +1,14 @@
 # Harden log
 
 Local LibreLane 3.0.2 runs (`harden/`, sky130A open_pdks 8afc834) of tt_um_pettit_adpcm on the
-micro tile. The recipe is `src/config.json`, the same as ttsky26e-um-pettit-micro's (drive
-strength 1 cells allowed in synthesis, hold margins 0.04 / 0.03, a one-cluster clock tree) with
-the clock period at 31 ns.
+micro tile. The recipe is `src/config.json`: drive strength 1 cells allowed in synthesis
+(`src/no_synth.cells`), target density 88%, hold margins 0.04 / 0.03 ns, a one-cluster clock
+tree, and a 31 ns clock period.
 
 ## Why bit-serial (2026-11-25)
 
-A parallel IMA decoder was estimated at well over the tile: the 89 x 15-bit step table alone
+A conventional parallel ADPCM decoder of the table-driven (IMA) kind was estimated at well over
+the tile: its 89 x 15-bit step table alone
 is some 800 um2 of logic, the 16-bit add with clamps 350, the delta's three adders 600. Two
 16-bit shift registers that rotate continuously cost 640 um2 of flops and no logic at all (no
 enables, no muxes: D is the neighbour's Q), and one full adder does every operation. 16-bit
@@ -19,7 +20,7 @@ back in place exactly when the PWM takes its duty, so nothing needs a shift enab
 | run | synth um2 | result |
 |-----|-----------|--------|
 | rc1 | 1994 | clean, 88.1% utilization, router 4 iterations |
-| rc2 | 1994 | the top renamed tt_um_pettit_adpcm (was tt_um_pettit_micro3): the same numbers; gate-level test and precheck pass |
+| rc2 | 1994 | the top module renamed tt_um_pettit_adpcm, nothing else: the same numbers; gate-level test and precheck pass |
 
 rc1: standard cells 2641 um2, of which timing repair buffers 480 (hold buffers: a shift register
 is 32 flop-to-flop paths with nothing between) and clock buffers 113; wire 5491 um; route DRC,

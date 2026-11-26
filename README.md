@@ -8,7 +8,7 @@ flip-flops in the experimental sky130 **micro tile** (70.38 x 51.68 um; `tiles: 
 
 - [The datasheet](docs/info.md): the codec, the datapath, the host's protocol
 - [src/tt_um_pettit_adpcm.v](src/tt_um_pettit_adpcm.v): the design, one file
-- [tools/uadpcm.py](tools/uadpcm.py): encoder, reference decoder, converters (no dependencies)
+- [tools/](tools/): `audio2ua.py` converts mp3 / m4a / wma / wav / MIDI to a stream; `uadpcm.py` is the codec (encoder, reference decoder; no dependencies); `mid2wav.py` renders MIDI
 - [host/play_ua.py](host/play_ua.py): MicroPython PIO + DMA player for the demo board's RP2
 - [host/stream_ua.py](host/stream_ua.py): plays a file of any length by streaming it from a computer over the board's USB port
 - [fpga/](fpga/): the design on the Tiny Tapeout FPGA breakout (iCE40UP5K), where it has been run
@@ -17,11 +17,15 @@ flip-flops in the experimental sky130 **micro tile** (70.38 x 51.68 um; `tiles: 
 ## Make and hear a stream
 
 ```sh
-afconvert -f WAVE -d LEI16@31250 -c 1 song.m4a song.wav      # macOS; any 16-bit WAV will do
-python3 tools/uadpcm.py encode song.wav song.ua --gain 0.9   # also takes a prism-tui IMA ADPCM .bin
-python3 tools/uadpcm.py decode song.ua check.wav             # exactly what the chip will play
-python3 tools/uadpcm.py snr song.wav --seconds 20            # against IMA ADPCM
+python3 -m venv .venv && .venv/bin/pip install -r tools/requirements.txt    # numpy, scipy, mido
+.venv/bin/python tools/audio2ua.py song.mp3 song.ua --trim --autoboost      # mp3, m4a, wma, flac, wav, mid ...
+python3 tools/uadpcm.py decode song.ua check.wav                            # exactly what the chip will play
 ```
+
+`audio2ua.py` decodes the file (macOS `afconvert`, or `ffmpeg`), mixes it to mono, trims
+silence, raises the level under a look-ahead limiter, fades the ends, resamples to 31250 Hz and
+encodes; [tools/README.md](tools/README.md) has every step and option, and the `.ua` file
+format (a 12-byte header, then the 4-bit codes two to a byte).
 
 ## Simulation
 

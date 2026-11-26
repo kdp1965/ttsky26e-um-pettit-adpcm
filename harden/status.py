@@ -3,8 +3,7 @@
 
     python3 status.py [runs/<tag>] [--bin 30] [--top 10] [--stop]
 
-(From ihp-um-janestreet-prism's tools/drt_status.py, with the step overview
-added.)  Without a run directory the newest under runs/ is taken.  Prints
+Without a run directory the newest under runs/ is taken.  Prints
 the run's steps with their durations and the tail of the one in progress;
 then, once the detailed router has started, the violation count per
 iteration from its log and the newest DRC report it wrote (the final one, or

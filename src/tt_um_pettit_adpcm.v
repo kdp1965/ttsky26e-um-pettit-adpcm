@@ -8,12 +8,14 @@
  *
  * The host (the RP2350: a PIO state machine fed by DMA) puts a 4-bit code on
  * ui[3:0] and raises the strobe ui[4], once a sample.  The codec ("uADPCM",
- * tools/uadpcm.py) is IMA ADPCM with the step table replaced by arithmetic:
+ * tools/uadpcm.py) is an adaptive differential PCM whose two updates are
+ * shifts and adds of the step size, with no table.  For a code {sgn, m[2:0]},
+ * a 16-bit predictor (0x8000 after reset) and a 16-bit step (16 after reset):
  *
  *     pred -/+= step>>3 + (m2 ? step : 0) + (m1 ? step>>1 : 0) + (m0 ? step>>2 : 0)
  *     step   = m2 ? step + (step >> (3 - m[1:0])) : step - (step >> 4)
  *
- * and everything is bit-serial.  The 16-bit predictor and the 16-bit step
+ * Everything is bit-serial.  The 16-bit predictor and the 16-bit step
  * are two shift registers that rotate all the time, least significant bit
  * first, once every 16 clocks; one full adder adds (or subtracts) a tap of
  * the step register, which is the step shifted right, to whichever register
