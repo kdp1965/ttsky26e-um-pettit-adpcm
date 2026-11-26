@@ -48,7 +48,17 @@
   }
 
   // ------------------------------------------------------------ the song
+  // The stream being played is made from the song as it was converted: before
+  // the song changes, the stream is stopped (with its fade-out) and has ended.
+  async function stopStream() {
+    if (S.busy !== "stream") return;
+    log("Stopping playback: the song is changing");
+    stop();
+    if (S.job) await S.job;
+  }
+
   async function loadFile(file) {
+    await stopStream();
     if (S.busy && S.busy !== "convert") { log("Busy: stop the board first"); return; }
     stopPreview();
     const buf = await file.arrayBuffer(), bytes = new Uint8Array(buf);
@@ -76,6 +86,7 @@
 
   async function convert() {
     if (!S.fileBuf) return;
+    await stopStream();
     const gen = ++S.gen;
     const wasBusy = S.busy;
     if (!wasBusy) setBusy("convert");
@@ -148,7 +159,11 @@
   }
 
   let convTimer = 0;
-  function convertSoon() { clearTimeout(convTimer); convTimer = setTimeout(convert, 350); }
+  function convertSoon() {
+    if (S.busy === "stream") stop();        // at once, not after the pause that collects several changes
+    clearTimeout(convTimer);
+    convTimer = setTimeout(() => convert().catch(fail), 350);
+  }
 
   function showSong() {
     const s = S.song;
