@@ -1,0 +1,66 @@
+
+
+  <h2>Micro ADPCM decoder: tt_um_pettit_adpcm</h2>
+
+
+                         +-------------+      +-------------+      +---------------+
+  ui[4] STROBE --------->| 3-flop sync |----->|   pending   |----->|   sequencer   |
+                         | rising edge |      |    flag     |      | passes 1 to 5 |
+                         |    {py}     |      |    {py}     |      |     {py}      |
+                         +-------------+      +-------------+      +---------------+
+                                                                           |
+                                                                           v
+                                                                   +---------------+
+  ui[3:0] CODE --------------------------------------------------->|  pass decode  |
+  sign, m2, m1, m0                                                 |  k, en, sub   |
+                                                                   |     {py}      |
+                                                                   +---------------+
+                                                                           |
+                                        +----------------------------------*
+                                        | k                                | en, sub
+                                        v                                  v
+           +--------------+      +-------------+                   +---------------+
+     +---->|     step     |----->|     tap     |         b         |               |
+     |     | 16-bit shift |      |  step >> k  |------------------>|  full adder   |
+     |     |   register   |      |    {pr}     |                   |     1 bit     |         sum
+     |     |     {pb}     |      +-------------+                   |   and carry   |--------------+
+     |     +--------------+                                        |     flop      |              |
+     |                                                             |               |              |
+     |     +--------------+                                        |     {pr}      |              |
+     *---->|     pred     |              a                         |               |              |
+     |     | 16-bit shift |--------------------------------------->|               |              |
+     |     |   register   |                                        +---------------+              |
+     |     |     {pb}     |                                                                       |
+     |     +--------------+                                                                       |
+     |            |                                                                               |
+     +------------|-------------------------------------------------------------------------------+
+                  |               one bit a clock, into the register being updated
+                  |
+                  *-----------------------------+
+                  | pred[15:11]                 | pred[10:6]
+                  v                             v
+           +--------------+             +---------------+
+           |  duty latch  |             |  sigma-delta  |
+           |    5 bits    |             |   5-bit acc   |
+           |     {pt}     |             |     {pt}      |
+           +--------------+             +---------------+
+                  |                             | carry: one more clock
+                  v                             v
+           +--------------------------------------------+
+           |  compare: high while ramp <= duty + carry  |---------> uo[7] PWM, 1 MHz
+           |                    {pt}                    |
+           +--------------------------------------------+
+                                 ^
+                                 |
+           +--------------------------------------------+
+           |  ramp: 5-bit counter of the 32 MHz clock   |
+           |     low 4 bits: which bit is going by      |
+           |                    {pw}                    |
+           +--------------------------------------------+
+
+{:FILE theme light scale 1.5 no-shadows}
+{:pb blend cC0C0FF cE0E0FF text cBLK line cBLK border cBLK}
+{:py blend cE0E090 cFFFFB0 text cBLK line cBLK border cBLK}
+{:pr blend cFFC0C0 cFFE8E8 text cBLK line cBLK border cBLK}
+{:pt blend cE2C49C cFADCB4 text cBLK line cBLK border cBLK}
+{:pw blend cE8E8E8 cF8F8F8 text cBLK line cBLK border cBLK}

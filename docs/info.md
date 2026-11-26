@@ -7,6 +7,8 @@ board's microcontroller) sends one 4-bit code per audio sample; the chip turns e
 audio. A 3.6 minute song at 31250 samples a second is 3.4 MB of codes. The whole design is 58
 flip-flops and about 150 gates.
 
+![Block diagram of the decoder](block_diagram.png)
+
 ### The codec: uADPCM
 
 Adaptive differential PCM sends, instead of each sample, how far it is from the previous one,

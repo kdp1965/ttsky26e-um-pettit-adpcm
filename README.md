@@ -6,6 +6,8 @@ The host streams 4-bit ADPCM codes, one a sample; the chip decodes them to 16 bi
 bit-serial datapath (one full adder) and plays them as 1 MHz sigma-delta dithered PWM. 58
 flip-flops in the experimental sky130 **micro tile** (70.38 x 51.68 um; `tiles: "micro"`).
 
+![Block diagram](docs/block_diagram.png)
+
 - [The datasheet](docs/info.md): the codec, the datapath, the host's protocol
 - [src/tt_um_pettit_adpcm.v](src/tt_um_pettit_adpcm.v): the design, one file
 - [tools/](tools/): `audio2ua.py` converts mp3 / m4a / wma / wav / MIDI to a stream; `uadpcm.py` is the codec (encoder, reference decoder; no dependencies); `mid2wav.py` renders MIDI
