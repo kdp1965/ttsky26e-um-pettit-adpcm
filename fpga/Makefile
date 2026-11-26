@@ -1,6 +1,7 @@
 # The design on the Tiny Tapeout FPGA breakout (iCE40UP5K, FabricFox pinout):
 #   make                 build/tt_um_pettit_adpcm.bin   (yosys, nextpnr-ice40, icepack: OSS CAD Suite on the PATH)
 #   make upload          copy it to the board's /bitstreams (mpremote, PORT=/dev/cu.usbmodem...)
+#   make web             ../web/bitstream.js: the bitstream the web player uploads to a board that lacks it
 # tt-support-tools' tt_fpga.py does the same for full-size projects; its top
 # has the uio and ena ports that a micro tile project does not.
 NAME = tt_um_pettit_adpcm
@@ -15,5 +16,7 @@ $(B)/$(NAME).bin: tt_fpga_top.v ../src/$(NAME).v tt_fpga_fabricfoxv2.pcf
 	icepack $(B)/$(NAME).asc $@
 upload: $(B)/$(NAME).bin
 	mpremote connect $(PORT) cp $< :/bitstreams/$(NAME).bin
+web: $(B)/$(NAME).bin
+	python3 ../web/mkbitstream.py $< $(NAME) > ../web/bitstream.js
 clean:
 	rm -rf $(B)
