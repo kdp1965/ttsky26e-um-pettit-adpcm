@@ -41,15 +41,30 @@ PERIOD=1024 SAMPLES=400 make      # at the real 31250 Hz strobe rate
 
 ## On the FPGA breakout
 
+The design runs on the Tiny Tapeout FPGA breakout (RP2350 + iCE40UP5K) today, with the web
+player at **https://kdp1965.github.io/uadpcm-player/** (Chrome or Edge):
+
+1. Audio Pmod on the output (`uo`) port; optionally a Tiny Tapeout QSPI Pmod on the
+   bidirectional (`uio`) port.
+2. Connect the breakout by USB, open the page, press *Connect* and choose the board's port. The
+   page uploads this design's bitstream if the board does not have it (it asks before
+   replacing a running design).
+3. Click a ready-made song or drop a music file, and press *Play on chip*. With the QSPI Pmod,
+   *Save to board* stores songs in its flash or PSRAM for the board to play on its own.
+
+The bitstream comes from the `fpga` GitHub action (the `fpga_bitstream` artifact) or from a
+local build, and the command-line players still work:
+
 ```sh
 cd fpga && make && make upload PORT=/dev/cu.usbmodemXXXX     # OSS CAD Suite and mpremote on the PATH
-mpremote cp host/play_ua.py :/play_ua.py + cp clip.ua :/clip.ua
+make web                                                     # ../web/bitstream.js, the copy the page uploads
+python3 host/stream_ua.py song.ua /dev/cu.usbmodemXXXX       # stream a file from the computer
 ```
 
-then, on the board, the six lines at the top of `host/play_ua.py`; or, for a song that does not
-fit the board's flash, `python3 host/stream_ua.py song.ua /dev/cu.usbmodemXXXX` on the computer. Checked on 2026-11-25 with a
-logic analyser on `uo_out`: 70,124 consecutive samples of a song, the duty after every code equal
-to the reference decoder's, a code every 32.00 us with no gap between DMA blocks.
+Checked on 2026-11-25 with a logic analyser on `uo_out`: 116,518 consecutive samples of a
+streamed song, the duty after every code equal to the reference decoder's, a code every 32.00 us
+with no gap between blocks; the same for about 87,000 samples played from the Pmod's flash and
+from its PSRAM, and across a pause.
 
 ## Hardening locally
 

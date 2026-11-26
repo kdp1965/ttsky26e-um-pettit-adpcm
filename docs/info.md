@@ -93,6 +93,34 @@ Connect the [Tiny Tapeout audio Pmod](https://github.com/MichaelBell/tt-audio-pm
 input is `uo[7]`, set the clock to 32 MHz and hold reset for 16 clocks or more. The output then
 idles at 50% duty (silence).
 
+The quickest test is the web player, **https://kdp1965.github.io/uadpcm-player/**, in Chrome or
+Edge on a computer: connect the demo board by USB, press *Connect*, pick the board's serial port,
+then click one of the ready-made songs (or drop an mp3, m4a or wav on the page) and press *Play
+on chip*. The page converts the song in the browser and streams it to the chip through the
+board's microcontroller; it sets the clock and the reset itself.
+
+### On the FPGA breakout, before the chip exists
+
+The same page runs the design on the Tiny Tapeout FPGA breakout (an RP2350 and an iCE40UP5K in
+place of the chip):
+
+1. Plug the audio Pmod into the output (`uo`) port and a speaker or headphones into the Pmod.
+   Optionally plug a Tiny Tapeout QSPI Pmod into the bidirectional (`uio`) port.
+2. Connect the breakout by USB and open the page. Press *Connect* and choose the board's port.
+3. The page looks for this design's bitstream on the board and uploads it if it is not there
+   (about 5 seconds; it asks before it replaces a design that is running). The status line
+   then reads "FPGA breakout, tt_um_pettit_adpcm", followed by the flash and PSRAM it found.
+4. Click a ready-made song or drop a music file, and press *Play on chip*. *Pause*, *Stop* and
+   a click on the waveform (where to start) work while it plays.
+5. With the QSPI Pmod, *Save to board* writes the song to its flash or PSRAM, and the songs
+   listed under *Songs on the board* are then played by the board on its own.
+
+The bitstream is also built by this repository's `fpga` GitHub action (the `fpga_bitstream`
+artifact) and by `make` in `fpga/`, with the OSS CAD Suite; `make upload` copies it to the
+board's `/bitstreams` folder with mpremote.
+
+### Pins
+
 | Pin | Function |
 |-----|----------|
 | `ui[3:0]` | CODE: `ui[3]` sign (1 = down), `ui[2:0]` magnitude |
@@ -133,9 +161,11 @@ encodes. `--wav check.wav` also writes exactly what the chip will play. A `.ua` 
 four characters `uADP`, the number of samples and the sample rate (two little-endian 32-bit
 numbers), then the codes, two to a byte, the first in the low nibble.
 
-The design and the player have been run on the Tiny Tapeout FPGA breakout (`fpga/`): with a
-logic analyser on `uo_out`, the duty after each of 70,124 consecutive codes of a song was the
-reference decoder's.
+The web player does the same conversion in the browser.
+
+The design and the players have been run on the FPGA breakout with a logic analyser on
+`uo_out`: the duty after each of 116,518 consecutive codes of a streamed song was the reference
+decoder's, and likewise for about 87,000 codes played from the Pmod's flash and from its PSRAM.
 
 ## External hardware
 
