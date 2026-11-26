@@ -83,6 +83,16 @@ bits of the sample, and the error that is left is pushed up to frequencies the o
 removes. 1 MHz was chosen for the Tiny Tapeout audio Pmod, whose filter rolls off gently from
 about 200 kHz.
 
+The output is at mid-scale in reset too. There the counter is held, so there is no PWM period
+to count; the pin toggles on every clock instead, a 16 MHz square wave at 50%, which the
+output filter cannot tell from the 50% PWM of silence. The first period after reset is taken
+from a duty register that reset sets to 16 of 32. Going into reset and coming out of it are
+therefore silent: no step, no pop.
+
+`uo[6]` carries the complement of the PWM. An amplifier with a differential (bridge) input, or
+a piezo sounder, between `uo[7]` and `uo[6]` sees twice the swing of one pin; the pins cannot
+drive a low-impedance speaker directly.
+
 While a code is being decoded the predictor passes through up to three intermediate values
 (one per term added), each on the way from the old sample to the new one; a PWM period that
 starts in those 2 microseconds plays one of them.
@@ -90,8 +100,8 @@ starts in those 2 microseconds plays one of them.
 ## How to test
 
 Connect the [Tiny Tapeout audio Pmod](https://github.com/MichaelBell/tt-audio-pmod) so that its
-input is `uo[7]`, set the clock to 32 MHz and hold reset for 16 clocks or more. The output then
-idles at 50% duty (silence).
+input is `uo[7]`, set the clock to 32 MHz and hold reset for 16 clocks or more. The output
+idles at 50% duty (silence), in reset and out of it.
 
 The quickest test is the web player, **https://kdp1965.github.io/uadpcm-player/**, in Chrome or
 Edge on a computer: connect the demo board by USB, press *Connect*, pick the board's serial port,
@@ -134,7 +144,7 @@ etc.
 | `ui[3:0]` | CODE: `ui[3]` sign (1 = down), `ui[2:0]` magnitude |
 | `ui[4]`   | STROBE: a rising edge takes the code |
 | `uo[7]`   | PWM audio, 1 MHz |
-| `uo[6]`   | the predictor going by, bit 0 first, 16 clocks a turn (bit 0 is on the pin two clocks before the PWM rises) |
+| `uo[6]`   | PWM audio, inverted: the complement of `uo[7]` |
 | `uo[5]`   | BUSY: a code is waiting or being decoded |
 | `uo[4:0]` | the PWM duty: the top 5 bits of the sample |
 
@@ -178,4 +188,5 @@ decoder's, and likewise for about 87,000 codes played from the Pmod's flash and 
 ## External hardware
 
 [Tiny Tapeout audio Pmod](https://github.com/MichaelBell/tt-audio-pmod) (or any low-pass filter
-and amplifier) on `uo[7]`.
+and amplifier) on `uo[7]`; optionally a differential-input amplifier or a piezo sounder between
+`uo[7]` and `uo[6]`.

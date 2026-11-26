@@ -51,6 +51,17 @@ async def test_stream(dut):
     dut.ui_in.value = 0
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 20)
+    # in reset: mid-scale duty on uo[4:0], no code pending
+    assert str(dut.uo_out.value)[2:] == "010000", f"uo_out in reset: {dut.uo_out.value}"
+    if os.environ.get("GATES") != "yes":
+        # ... and the PWM pin toggles every clock, uo[6] its complement (the
+        # flop powers up either way; in the RTL simulation it is given a value)
+        dut.user_project.pwm.value = 0
+        seen = []
+        for _ in range(8):
+            await FallingEdge(dut.clk)
+            seen.append(int(dut.uo_out.value) >> 6)
+        assert seen in ([1, 2] * 4, [2, 1] * 4), f"uo[7:6] in reset: {seen}"
     await FallingEdge(dut.clk)
     dut.rst_n.value = 1
 

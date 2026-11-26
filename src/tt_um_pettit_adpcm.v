@@ -25,7 +25,8 @@
  * With a 32 MHz clock two rotations are one 1 MHz PWM period.  At its start
  * the registers are back in place and the top 5 bits of the predictor are
  * taken as the duty; the next 5 feed a first-order sigma-delta whose carry
- * lengthens the pulse by one clock.
+ * lengthens the pulse by one clock.  In reset the output toggles every
+ * clock, which is mid-scale too.  uo[6] is the complement of the PWM.
  */
 
 `default_nettype none
@@ -119,20 +120,25 @@ module tt_um_pettit_adpcm #(
   reg [SD-1:0] acc;
   reg          extra;
   reg          pwm;
-  wire         load = (ramp == 5'd0);
+  wire         zero = (ramp == 5'd0);
+  wire         load = zero & ~init;     // not before the constants are in
   always @(posedge clk) begin
     if (!rst_n) begin
       {extra, acc} <= {(SD + 1) {1'b0}};
+      duty         <= 5'd16;
     end else if (load) begin
       {extra, acc} <= {1'b0, acc} + {1'b0, pred[10:11-SD]};
+      duty         <= pred[15:11];
     end
-    if (load) duty <= pred[15:11];
-    // high from ramp 1 for duty (+1) clocks
-    pwm <= ~load & ({1'b0, ramp} <= {1'b0, duty} + {5'd0, extra});
+    // High from ramp 1 for duty (+1) clocks.  In reset the output toggles
+    // every clock: half the clock's frequency at 50%, which a low-pass filter
+    // cannot tell from the mid-scale PWM that follows, so going into reset
+    // and coming out of it are silent.
+    pwm <= rst_n ? (~zero & ({1'b0, ramp} <= {1'b0, duty} + {5'd0, extra})) : ~pwm;
   end
 
-  // uo[7] PWM (the audio Pmod's pin), uo[6] the predictor going by (bit 0
-  // first), uo[5] busy, uo[4:0] the duty
-  assign uo_out = {pwm, pred[0], pend | (phase != 3'd0), duty};
+  // uo[7] PWM (the audio Pmod's pin), uo[6] its complement (a speaker
+  // between the two sees twice the swing), uo[5] busy, uo[4:0] the duty
+  assign uo_out = {pwm, ~pwm, pend | (phase != 3'd0), duty};
 
 endmodule

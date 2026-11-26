@@ -17,7 +17,7 @@ class Model:
         self.phase = 0
         self.init = 1
         self.cy = 0
-        self.duty = None        # unknown until the first load
+        self.duty = 16          # mid-scale, set by the reset
         self.acc = self.extra = 0
         self.pwm = None
 
@@ -40,8 +40,9 @@ class Model:
         s = a ^ b ^ cin
         cout = (a & b) | (a & cin) | (b & cin)
 
-        load = self.ramp == 0
-        pwm = 0 if load else None if self.duty is None else int(self.ramp <= self.duty + self.extra)
+        zero = self.ramp == 0
+        load = zero and not self.init
+        pwm = 0 if zero else int(self.ramp <= self.duty + self.extra)
         if load:
             t = self.acc + (self.pred >> (11 - SD) & ((1 << SD) - 1))
             self.extra, self.acc = t >> SD, t & ((1 << SD) - 1)
@@ -69,6 +70,4 @@ class Model:
         self.cy = cout
         self.pwm = pwm
         busy = 1 if self.pend or self.phase else 0
-        if pwm is None or self.duty is None:
-            return None
-        return pwm << 7 | (self.pred & 1) << 6 | busy << 5 | self.duty
+        return pwm << 7 | (pwm ^ 1) << 6 | busy << 5 | self.duty

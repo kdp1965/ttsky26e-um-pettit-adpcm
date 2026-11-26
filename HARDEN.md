@@ -21,6 +21,7 @@ back in place exactly when the PWM takes its duty, so nothing needs a shift enab
 |-----|-----------|--------|
 | rc1 | 1994 | clean, 88.1% utilization, router 4 iterations |
 | rc2 | 1994 | the top module renamed tt_um_pettit_adpcm, nothing else: the same numbers; gate-level test and precheck pass |
+| rc3 | 2014 | mid-scale output in reset, and the inverted PWM on uo[6] in place of the serial predictor: clean, 88.2% utilization, a longer route (15 violation counts in the router's trail against rc2's 7) |
 
 rc1: standard cells 2641 um2, of which timing repair buffers 480 (hold buffers: a shift register
 is 32 flop-to-flop paths with nothing between) and clock buffers 113; wire 5491 um; route DRC,
@@ -28,6 +29,16 @@ Magic DRC, LVS and antenna 0; 3 max-slew warnings; setup +19.8 ns at max_ss agai
 period; hold +0.064 ns at min_ff (+0.235 at tt), on top of LibreLane's 0.25 ns clock
 uncertainty. Gate-level simulation of rc1's netlist: 3000 samples, 388,096 clocks, 0
 mismatches. tt-support-tools precheck (main, micro rules): pass.
+
+rc3 (2026-11-25): in reset the PWM flop toggles every clock (16 MHz at 50%) and the duty
+register is set to 16, loaded from the predictor only once the constants are in; `uo[6]` is
+`~pwm`. 20 um2 more logic. Standard cells 2644 um2, timing repair buffers 469, wire 5956 um;
+route DRC, Magic DRC, LVS and antenna 0; 8 max-slew warnings; setup +19.4 ns, hold +0.060 ns.
+The router's trail is 15 violation counts long where rc2's is 7: the tile is close to its limit. Gate-level
+simulation: 3000 samples, 388,096 clocks, 0 mismatches. Precheck: pass. On the FPGA breakout
+with a logic analyser: through a 1 s reset the output stays at 50.0 to 50.1% high (3.2 million
+edges per 100 ms: the 16 MHz toggle) with the duty pins at 16, `uo[6]` is the complement
+throughout, and a streamed clip decodes exactly (84,908 samples, 0 differences).
 
 Not promoted: `gds/` is not in the repository; the GitHub gds action builds its own.
 

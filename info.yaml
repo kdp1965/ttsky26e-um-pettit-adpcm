@@ -39,7 +39,7 @@ pinout:
   uo[3]: "DUTY[3]"
   uo[4]: "DUTY[4]"
   uo[5]: "BUSY"
-  uo[6]: "PRED (serial, bit 0 first)"
+  uo[6]: "PWM audio, inverted"
   uo[7]: "PWM audio (1 MHz)"
 
   # Bidirectional pins
