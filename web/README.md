@@ -4,6 +4,10 @@ A page that turns a music file into a uADPCM stream and plays it through `tt_um_
 on a Tiny Tapeout demo board, over Web Serial. Nothing is installed and nothing leaves the
 computer: the decoding, the conversion and the encoder all run in the browser.
 
+It is published at **https://kdp1965.github.io/uadpcm-player/** (the repository
+[kdp1965/uadpcm-player](https://github.com/kdp1965/uadpcm-player) is a copy of this folder; `./publish.sh`
+updates a checkout of it). To run it from here:
+
 ```sh
 python3 -m http.server 8000 --bind 127.0.0.1 --directory web     # then open http://127.0.0.1:8000
 ```
