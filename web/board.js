@@ -51,6 +51,68 @@ def _stream():
     out(pins, 4).side(0)[7]
     nop().side(1)[7]
 
+# the same, one code per word: for home()
+@rp2.asm_pio(out_init=(rp2.PIO.OUT_LOW,) * 4, sideset_init=rp2.PIO.OUT_LOW,
+             out_shiftdir=rp2.PIO.SHIFT_RIGHT, autopull=True, pull_thresh=4, fifo_join=rp2.PIO.JOIN_TX)
+def _one():
+    out(pins, 4).side(0)[7]
+    nop().side(1)[7]
+
+HOMED = False
+
+def home():
+    # Bring the decoder to its reset state (predictor 0x8000, step 16) with
+    # codes, not with reset: reset drives the output to 0 and back, which is a
+    # pop, and this is a ramp.  The chip shows the top 5 bits of its predictor
+    # on uo[4:0].  Small codes let the step fall to 15, where a code moves the
+    # predictor by exactly 1 (magnitude 0) or 11 (magnitude 3); the predictor
+    # is walked to where uo[4:0] changes from 16 to 15, which is 0x7FFF; 15
+    # more down and one magnitude 4 up (+16, step 15 -> 16) end at 0x8000, 16.
+    global HOMED
+    if HOMED:
+        return
+    uo = [Pin(getattr(tt.pins, "uo_out%d" % i).gpio_num, Pin.IN) for i in range(5)]
+    sm = rp2.StateMachine(0, _one, freq=16 * 62500, out_base=Pin(CODE), sideset_base=Pin(STROBE))
+    def send(code, n=1):
+        for _ in range(n):
+            sm.put(code)
+    def duty():
+        while sm.tx_fifo():
+            pass
+        time.sleep_us(150)
+        return uo[0]() | uo[1]() << 1 | uo[2]() << 2 | uo[3]() << 3 | uo[4]() << 4
+    sm.active(1)
+    try:
+        a = 8 if duty() >= 16 else 0         # the first, largest move is toward the middle
+        for _ in range(90):
+            send(a); send(a ^ 8)
+        ok = False
+        for _ in range(60):
+            d = duty()
+            if d == 15:
+                ok = True
+                break
+            if d >= 16:
+                send(0xB, 150 if d == 16 else (d - 16) * 186)
+            else:
+                send(0x3, (15 - d) * 186)
+        n = 0
+        while ok and duty() == 15 and n < 600:
+            send(0x3, 4); n += 1
+        n = 0
+        while ok and duty() == 16 and n < 100:
+            send(0x8); n += 1
+        ok = ok and duty() == 15
+        if ok:
+            send(0x8, 15)
+            send(0x4)
+            duty()
+    finally:
+        sm.active(0)
+    if not ok:                               # no answer on uo: the hard way
+        tt.reset_project(True); time.sleep_ms(1); tt.reset_project(False)
+    HOMED = True
+
 def _recv(mv, n):
     k = 0
     while k < n:
@@ -116,6 +178,11 @@ def start():
     getattr(tt.shuttle, PROJECT).enable()
     tt.ui_in.value = 0
     tt.clock_project_PWM(%CLOCK%)
+    # out of reset from here on: in reset the output is 0, and the step to
+    # mid-scale is heard once, now, and not before every song
+    global HOMED
+    tt.reset_project(True); time.sleep_ms(1); tt.reset_project(False)
+    HOMED = True
     if %PROBE%:
         try:
             storage_init()
@@ -124,7 +191,6 @@ def start():
     print("J " + json.dumps({"code": CODE, "strobe": STROBE, "uio": U, "block": BLOCK, "stores": STORES}))
 
 def _engine(rate, loader):
-    sm = rp2.StateMachine(0, _stream, freq=16 * rate, out_base=Pin(CODE), sideset_base=Pin(STROBE))
     dma = [rp2.DMA(), rp2.DMA()]
     def ctrl(i, chain):
         return dma[i].pack_ctrl(size=0, inc_read=True, inc_write=False, treq_sel=0,
@@ -134,7 +200,10 @@ def _engine(rate, loader):
         if n:
             dma[i].config(read=bufs[i], write=PIO0_TXF0, count=n, ctrl=ctrl(i, True), trigger=False)
         return n
-    tt.reset_project(True); time.sleep_ms(2); tt.reset_project(False)
+    global HOMED
+    home()
+    sm = rp2.StateMachine(0, _stream, freq=16 * rate, out_base=Pin(CODE), sideset_base=Pin(STROBE))
+    HOMED = False
     try:
         if arm(0):
             more = arm(1)
@@ -158,6 +227,10 @@ def _engine(rate, loader):
     finally:
         sm.active(0)
         dma[0].close(); dma[1].close()
+        try:
+            home()                       # leave the output at mid-scale, ready for the next one
+        except Exception:
+            pass
 
 def play(rate):
     micropython.kbd_intr(-1)            # the stream is binary: 0x03 is data
