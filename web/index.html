@@ -95,6 +95,10 @@
     <h2>Song</h2>
     <div id="drop"><b>Drop a music file here</b> or click to choose one<br>
       <span style="font-size:13px">mp3, m4a, wav, flac, ogg ... or a ready-made <code>.ua</code> stream</span></div>
+    <div id="canned" class="row hidden" style="margin-top:10px">
+      <span style="color:var(--dim); font-size:13px">Ready-made songs:</span>
+      <span id="cannedlist" class="row" style="gap:6px"></span>
+    </div>
     <input id="file" type="file" class="hidden" accept="audio/*,.ua,.mp3,.m4a,.wav,.flac,.ogg,.aac,.aiff,.aif">
 
     <div id="songui" class="hidden">
@@ -158,6 +162,7 @@
 <script src="dsp.js"></script>
 <script src="board.js"></script>
 <script src="bitstream.js"></script>
+<script src="songs/songs.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

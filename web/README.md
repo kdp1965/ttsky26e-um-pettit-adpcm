@@ -25,6 +25,10 @@ or open `web/index.html` directly. Web Serial needs Chrome or Edge on a computer
    decoded, mixed to mono, cut, trimmed, levelled, limited, faded and encoded; every setting
    re-runs the conversion, and the waveform shows what the chip will play. *Preview here* plays
    exactly that through the computer; *Download .ua* saves the stream.
+   The **ready-made songs** under the drop zone are the `.ua` files in `songs/`: a click loads
+   one into the same viewer, to stream, save or download. They are fetched, so the page must be
+   served for them (not opened as a file). To change the list, add or remove files in `songs/`
+   and run `python3 mksongs.py > songs/songs.js` in `web/`.
 3. **Play on chip** streams it. Click the waveform to choose where to start; *Stop* fades out.
 4. **Save to board** writes the stream to the Pmod's flash or to one of its PSRAMs, verified
    block by block. The songs listed under *Songs on the board* are then played by the board on
@@ -40,6 +44,7 @@ or open `web/index.html` directly. Web Serial needs Chrome or Edge on a computer
 | `uadpcm.js` | the codec, bit for bit the same as `tools/uadpcm.py`; the `.ua` file; the song library's directory |
 | `dsp.js` | trim, auto level, look-ahead limiter, fades (as `tools/audio2ua.py`) |
 | `board.js` | the serial protocol and, in it, the MicroPython program that runs on the board |
+| `songs/`, `mksongs.py` | the ready-made songs and the script that lists them in `songs/songs.js` |
 | `bitstream.js` | the FPGA bitstream, generated: `make -C fpga web` |
 
 `uadpcm.js`, `dsp.js` and `board.js` also load in Node (`require`), which is how they are tested.

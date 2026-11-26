@@ -57,19 +57,42 @@
     if (S.job) await S.job;
   }
 
-  async function loadFile(file) {
+  function loadFile(file) {
+    return file.arrayBuffer().then((buf) => loadBytes(file.name, buf));
+  }
+
+  // one of the ready-made songs in songs/ (listed in songs/songs.js)
+  async function loadCanned(song) {
+    if (S.busy && S.busy !== "stream") { log("Busy: stop the board first"); return; }
+    log("Loading " + song.title + " (" + fmtB(song.bytes) + ")");
+    let buf;
+    try {
+      const r = await fetch("songs/" + encodeURIComponent(song.file));
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      buf = await r.arrayBuffer();
+    } catch (e) {
+      log("Could not fetch songs/" + song.file + " (" + e.message + "). The ready-made songs need the page to be served: " +
+          "python3 -m http.server --directory web, or drop the .ua file here.");
+      return;
+    }
+    await loadBytes(song.file, buf, song.title);
+  }
+
+  async function loadBytes(fileName, buf, title) {
     await stopStream();
     if (S.busy && S.busy !== "convert") { log("Busy: stop the board first"); return; }
     stopPreview();
-    const buf = await file.arrayBuffer(), bytes = new Uint8Array(buf);
-    const stem = file.name.replace(/\.[^.]*$/, "");
+    const file = { name: fileName };
+    const bytes = new Uint8Array(buf);
+    const stem = title || file.name.replace(/\.[^.]*$/, "");
     S.start = 0; S.cursor = -1;
     $("savename").value = stem.slice(0, 23);
     const ua = UADPCM.parseUa(bytes);
     if (ua) {
       S.fileBuf = null; S.decoded = null;
       const out = UADPCM.decode(UADPCM.unpack(ua.body, ua.samples));
-      S.song = { name: stem, rate: ua.rate, samples: ua.samples, body: ua.body.slice(), out, target: null, note: "ready-made stream" };
+      S.song = { name: stem, rate: ua.rate, samples: ua.samples, body: ua.body.slice(), out, target: null, note: "ready-made stream",
+                 fileStem: file.name.replace(/\.[^.]*$/, "") };
       $("convui").classList.add("hidden");
       showSong();
       log("Loaded " + file.name + ": " + fmtT(ua.samples / ua.rate) + " at " + ua.rate + " Hz");
@@ -253,7 +276,7 @@
     if (!s) return;
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([UADPCM.makeUa(s.body, s.samples, s.rate)], { type: "application/octet-stream" }));
-    a.download = s.name + ".ua";
+    a.download = (s.fileStem || s.name) + ".ua";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   });
@@ -552,6 +575,18 @@
     navigator.serial.addEventListener("disconnect", (ev) => { if (S.port && ev.target === S.port) { log("The board was unplugged"); disconnect(true); } });
   } else $("nosupport").classList.remove("hidden");
   window.addEventListener("resize", draw);
+  const canned = window.UA_SONGS || [];
+  if (canned.length) {
+    $("canned").classList.remove("hidden");
+    for (const song of canned) {
+      const b = document.createElement("button");
+      b.className = "small";
+      b.textContent = song.title;
+      b.title = fmtT(song.samples / song.rate) + ", " + fmtB(song.bytes);
+      b.onclick = () => loadCanned(song).catch(fail);
+      $("cannedlist").appendChild(b);
+    }
+  }
   window.UAApp = S;      // for the console
   refresh();
 })();
