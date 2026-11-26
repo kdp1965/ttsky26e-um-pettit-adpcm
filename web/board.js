@@ -118,6 +118,28 @@ def _recv(mv, n):
     while k < n:
         k += inp.readinto(mv[k:n])
 
+SM = [None, False]                       # the stream's state machine, and whether it is running
+
+def _pause():
+    # Pause: the state machine that clocks the codes out stops, and with it
+    # the DMA behind it.  The chip gets no strobe, keeps its state and holds
+    # its output; the next two bytes from the host (FE FF) resume.
+    run = SM[1]
+    if run:
+        SM[0].active(0)
+    sys.stdout.write("PAUSED\n")
+    _recv(hdr, 2)
+    if run:
+        SM[0].active(1)
+    sys.stdout.write("RESUMED\n")
+
+def _ctl():
+    # between blocks the only thing the host sends is FF FF: pause
+    if poll.poll(0):
+        _recv(hdr, 2)
+        if hdr[0] == 0xFF and hdr[1] == 0xFF:
+            _pause()
+
 def _req(mv):
     # ask the host for a block: it answers with a 2-byte length (0: the end) and the bytes
     sys.stdout.write("R\n")
@@ -125,6 +147,10 @@ def _req(mv):
         raise OSError("host timeout")
     _recv(hdr, 2)
     n = hdr[0] | hdr[1] << 8
+    if n == 0xFFFF:                      # a pause that crossed the request
+        _pause()
+        _recv(hdr, 2)
+        n = hdr[0] | hdr[1] << 8
     if n:
         _recv(mv, n)
     return n
@@ -204,16 +230,19 @@ def _engine(rate, loader):
     home()
     sm = rp2.StateMachine(0, _stream, freq=16 * rate, out_base=Pin(CODE), sideset_base=Pin(STROBE))
     HOMED = False
+    SM[0] = sm; SM[1] = False
     try:
         if arm(0):
             more = arm(1)
             if not more:
                 dma[0].ctrl = ctrl(0, False)
             sm.active(1)
+            SM[1] = True
             dma[0].active(1)
             cur = 0
             while True:
                 while dma[cur].active():
+                    _ctl()
                     time.sleep_ms(1)
                 if not more:
                     break
@@ -225,6 +254,7 @@ def _engine(rate, loader):
                 cur ^= 1
             time.sleep_ms(2)
     finally:
+        SM[1] = False
         sm.active(0)
         dma[0].close(); dma[1].close()
         try:
@@ -416,6 +446,8 @@ hello()
       this.info = null;
       this.busy = false;
       this.stopFlag = false;
+      this.paused = false;
+      this.playing = false;
     }
 
     feed(chunk) {
@@ -572,16 +604,21 @@ hello()
 
     async _guard(fn) {
       if (this.busy) throw new Error("the board is busy");
-      this.busy = true; this.stopFlag = false;
-      try { return await fn(); } finally { this.busy = false; }
+      this.busy = true; this.stopFlag = false; this.paused = false;
+      try { return await fn(); } finally { this.busy = false; this.paused = false; this.playing = false; }
     }
 
     // answer the board's block requests from source(max) -> Uint8Array (empty: the end)
     async _feedBlocks(source, onSent, onLine) {
       let sent = 0, ended = false, late = 0;
       for (;;) {
-        const l = await this.line(15000);
+        let l;
+        try { l = await this.line(15000); } catch (e) {
+          if (this.paused && /^timeout/.test(e.message)) continue;      // a paused board says nothing
+          throw e;
+        }
         if (l === "R") {
+          while (this.paused) await sleep(20);                          // answered after the resume
           const blk = ended ? new Uint8Array(0) : source(BLOCK);
           if (!blk.length) ended = true;
           const msg = new Uint8Array(2 + blk.length);
@@ -602,6 +639,7 @@ hello()
     play(rate, source, onSent) {
       return this._guard(async () => {
         await this.execStart("play(" + rate + ")");
+        this.playing = true;
         return this._feedBlocks(source, onSent);
       });
     }
@@ -632,6 +670,7 @@ hello()
     playStored(store, addr, n, rate, onPos) {
       return this._guard(async () => {
         await this.execStart("splay(" + store + "," + addr + "," + n + "," + rate + ")");
+        this.playing = true;
         let stopped = false, sentStop = false;
         for (;;) {
           if (this.stopFlag && !sentStop) { sentStop = true; await this.write("\x03"); }
@@ -650,6 +689,20 @@ hello()
     }
 
     stop() { this.stopFlag = true; }
+
+    // Pause what is playing: the board stops clocking codes out, and the
+    // chip holds its output and its state until resume().
+    async pause() {
+      if (!this.playing || this.paused) return;
+      this.paused = true;
+      await this.write(new Uint8Array([0xff, 0xff]));
+    }
+
+    async resume() {
+      if (!this.paused) return;
+      await this.write(new Uint8Array([0xfe, 0xff]));
+      this.paused = false;
+    }
   }
 
   function crc32(bytes) {

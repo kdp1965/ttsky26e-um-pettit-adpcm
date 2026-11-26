@@ -34,7 +34,10 @@
     $("connect").disabled = S.busy === "connect" || !("serial" in navigator);
     $("dot").className = "dot" + (on ? " on" : "");
     $("play").disabled = !(on && S.song && idle);
-    $("stop").disabled = !(S.busy === "stream" || S.busy === "stored");
+    const playing = S.busy === "stream" || S.busy === "stored";
+    const paused = !!(S.board && S.board.paused);
+    $("stop").disabled = !playing;
+    for (const id of ["pause", "libpause"]) { $(id).disabled = !playing; $(id).textContent = paused ? "Resume" : "Pause"; }
     $("save").disabled = !(on && S.song && idle);
     $("saveui").classList.toggle("hidden", !(on && S.stores.length));
     $("library").classList.toggle("hidden", !(on && S.stores.length));
@@ -413,7 +416,7 @@
     stopPreview();
     setBusy("stream");
     const body = bodyFromStart(), st = UADPCM.newState();
-    const run = { stop: false, done: false, t0: 0 };
+    const run = { stop: false, done: false, t0: 0, pausedAt: 0, pausedFor: 0 };
     S.stream = run;
     let pos = 0;
     const source = (max) => {
@@ -428,7 +431,7 @@
     const anim = () => {
       if (S.stream !== run) return;
       if (run.t0) {
-        const played = Math.min(sent * 2, (performance.now() - run.t0) / 1000 * s.rate);
+        const played = Math.min(sent * 2, ((run.pausedAt || performance.now()) - run.t0 - run.pausedFor) / 1000 * s.rate);
         S.cursor = Math.min(s.samples - 1, S.start + played);
         draw();
       }
@@ -539,14 +542,35 @@
   }
 
   function stop() {
-    if (S.busy === "stream" && S.stream) S.stream.stop = true;
-    else if (S.busy === "stored" && S.board) S.board.stop();
+    if (S.busy === "stream" && S.stream) {
+      S.stream.stop = true;
+      if (S.board && S.board.paused) togglePause();     // the fade-out has to be played
+    } else if (S.busy === "stored" && S.board) S.board.stop();
+  }
+
+  async function togglePause() {
+    const b = S.board;
+    if (!b || !(S.busy === "stream" || S.busy === "stored")) return;
+    try {
+      if (b.paused) {
+        await b.resume();
+        if (S.stream && S.stream.pausedAt) { S.stream.pausedFor += performance.now() - S.stream.pausedAt; S.stream.pausedAt = 0; }
+        log("Resumed");
+      } else {
+        await b.pause();
+        if (S.stream) S.stream.pausedAt = performance.now();
+        log("Paused");
+      }
+    } catch (e) { fail(e); }
+    refresh();
   }
 
   // ----------------------------------------------------------------- wiring
   $("connect").addEventListener("click", () => connect().catch(fail));
   $("play").addEventListener("click", () => { S.job = playOnChip().catch(fail); });
   $("libstop").addEventListener("click", stop);
+  $("pause").addEventListener("click", togglePause);
+  $("libpause").addEventListener("click", togglePause);
   // the page is going away: a last word to the board, without waiting for it
   window.addEventListener("pagehide", () => {
     if (!S.writer) return;

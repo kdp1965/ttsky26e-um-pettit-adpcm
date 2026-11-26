@@ -34,7 +34,9 @@ or open `web/index.html` directly. Web Serial needs Chrome or Edge on a computer
    block by block. The songs listed under *Songs on the board* are then played by the board on
    its own, read from the Pmod, with the page only showing progress and a *Stop*. A song can be
    renamed or deleted, on the flash as well: only the 4 KiB directory is rewritten.
-5. **Disconnect** (or closing the page) while something is playing stops it first.
+5. **Pause** stops the codes: the chip holds its output and its state, and **Resume** carries on
+   from the same sample. It works for a stream and for a song the board is playing.
+6. **Disconnect** (or closing the page) while something is playing stops it first.
 
 ## Files
 
@@ -59,6 +61,8 @@ RP2350 FPGA breakout and the demo boards.
 - **Streaming**: the board asks for a block (`R`), the page answers with a 2-byte length and up
   to 4096 bytes (8192 samples); length 0 ends the stream. If the page goes away the board gives
   up after 4 s.
+- **Pause**: between blocks the page may send `FF FF`; the board stops the state machine that
+  clocks the codes out (the DMA waits behind it) until two more bytes, `FE FF`, arrive.
 - **The Pmod** is driven from the RP2 with a second PIO as plain SPI at 8 MHz (`uio0` flash CS,
   `uio1` MOSI, `uio2` MISO, `uio3` SCK, `uio6`/`uio7` the PSRAMs' CS). The micro tile has no
   `uio`, so the chip is not involved. PSRAM is read and written in 512-byte bursts.
