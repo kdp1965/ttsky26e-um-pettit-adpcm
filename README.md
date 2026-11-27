@@ -6,7 +6,11 @@ The host streams 4-bit ADPCM codes, one a sample; the chip decodes them to 16 bi
 bit-serial datapath (one full adder) and plays them as 1 MHz sigma-delta dithered PWM. 58
 flip-flops in the experimental sky130 **micro tile** (70.38 x 51.68 um; `tiles: "micro"`).
 
-![Block diagram](docs/block_diagram.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/block_diagram_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/block_diagram.png">
+  <img alt="Block diagram" src="docs/block_diagram.png">
+</picture>
 
 - [The datasheet](docs/info.md): the codec, the datapath, the host's protocol
 - [src/tt_um_pettit_adpcm.v](src/tt_um_pettit_adpcm.v): the design, one file
