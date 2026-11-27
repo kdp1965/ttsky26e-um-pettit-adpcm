@@ -149,7 +149,7 @@
       if (x.length < 2) { $("stats").textContent = "Nothing left to play with these settings."; S.song = null; return; }
       x = x.slice();
 
-      const MAX_OVER1 = 0.8;   // percent of samples the limiter may reduce by more than 1 dB
+      const MAX_OVER1 = 10;    // percent of samples the limiter may reduce by more than 1 dB
       const ceiling = Math.min(1, Math.max(0.1, +$("ceiling").value || 0.98));
       let gain = 1, useLimit = $("limit").checked;
       if ($("levelmode").value === "auto") {

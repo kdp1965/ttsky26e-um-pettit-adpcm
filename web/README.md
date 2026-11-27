@@ -30,7 +30,7 @@ or open `web/index.html` directly. Web Serial needs Chrome or Edge on a computer
    re-runs the conversion, and the waveform shows what the chip will play. *Preview here* plays
    exactly that through the computer; *Download .ua* saves the stream.
    *Auto boost* raises the level until the given percentage of the samples is over the
-   limiter's ceiling, then backs off until the limiter reduces less than 0.8% of the song by
+   limiter's ceiling, then backs off until the limiter reduces less than 10% of the song by
    more than 1 dB (`tools/audio2ua.py --autoboost` does only the first part).
    The **ready-made songs** under the drop zone are the `.ua` files in `songs/`: a click loads
    one into the same viewer, to stream, save or download. They are fetched, so the page must be
